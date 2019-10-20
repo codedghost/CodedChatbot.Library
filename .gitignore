@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/CoreCodedChatbot.Library/CoreCodedChatbot.Library/obj
+/CoreCodedChatbot.Library/CoreCodedChatbot.Library/bin/Debug
+/CoreCodedChatbot.Library/.vs/config
+/CoreCodedChatbot.Library/.vs/CodedChatbot.Library
+/.vs
