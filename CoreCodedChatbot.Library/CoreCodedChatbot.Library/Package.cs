@@ -11,9 +11,12 @@ namespace CoreCodedChatbot.Library
     {
         public static ServiceCollection AddLibraryServices(this ServiceCollection services)
         {
-            // TODO: Add a package class to library to do this.
-            // Register Transient types
             services.AddTransient<IConfigService, ConfigService>();
+            
+            services.AddSingleton<IGuessingGameService, GuessingGameService>();
+            services.AddSingleton<IPlaylistService, PlaylistService>();
+            services.AddSingleton<IStreamStatusService, StreamStatusService>();
+            services.AddSingleton<IVipService, VipService>();
 
             return services;
         }
