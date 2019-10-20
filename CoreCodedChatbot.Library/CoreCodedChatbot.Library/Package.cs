@@ -9,7 +9,7 @@ namespace CoreCodedChatbot.Library
 {
     public static class Package
     {
-        public static ServiceCollection AddLibraryServices(this ServiceCollection services)
+        public static IServiceCollection AddLibraryServices(this IServiceCollection services)
         {
             services.AddTransient<IConfigService, ConfigService>();
             
