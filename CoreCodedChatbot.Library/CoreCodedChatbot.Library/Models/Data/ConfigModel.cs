@@ -45,5 +45,8 @@
         public string PrintfulAPIKey;
         public string PrintfulAPIBaseUrl;
         public string StreamStatusApiUrl;
+        public string KeyVaultAppId;
+        public string KeyVaultCertThumbprint;
+        public string KeyVaultBaseUrl;
     }
 }
