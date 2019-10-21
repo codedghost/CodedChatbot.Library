@@ -21,6 +21,8 @@ namespace CoreCodedChatbot.Library
             services.AddSingleton<IStreamStatusService, StreamStatusService>();
             services.AddSingleton<IVipService, VipService>();
 
+            services.AddSingleton<ISecretService, AzureKeyVaultSecretService>();
+
             return services;
         }
     }
