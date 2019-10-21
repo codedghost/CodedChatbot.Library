@@ -24,7 +24,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public T Get<T>(string configKey)
         {
-            var configString = _configRoot[$"AppSettings:{configKey}"];
+            var configString = _configRoot[configKey];
 
             if (string.IsNullOrWhiteSpace(configString))
                 return default(T);
