@@ -6,27 +6,21 @@ namespace CoreCodedChatbot.Library.Models.Data
 {
     public class VipRequests
     {
-        private ConfigModel _config;
+        private int _superVipCost;
 
-        public VipRequests(ConfigModel config)
+        public VipRequests(IConfigService configService, User user)
         {
-            _config = config;
-        }
+            _superVipCost = configService.Get<int>("SuperVipCost");
 
-        public static VipRequests Create(User user, ConfigModel config)
-        {
-            return new VipRequests(config)
-            {
-                Donations = user.DonationOrBitsVipRequests,
-                Follow = user.FollowVipRequest,
-                ModGiven = user.ModGivenVipRequests,
-                Sub = user.SubVipRequests,
-                Byte = user.TokenVipRequests,
-                ReceivedGift = user.ReceivedGiftVipRequests,
-                Used = user.UsedVipRequests,
-                SentGift = user.SentGiftVipRequests,
-                UsedSuperVipRequests = user.UsedSuperVipRequests
-            };
+            Donations = user.DonationOrBitsVipRequests;
+            Follow = user.FollowVipRequest;
+            ModGiven = user.ModGivenVipRequests;
+            Sub = user.SubVipRequests;
+            Byte = user.TokenVipRequests;
+            ReceivedGift = user.ReceivedGiftVipRequests;
+            Used = user.UsedVipRequests;
+            SentGift = user.SentGiftVipRequests;
+            UsedSuperVipRequests = user.UsedSuperVipRequests;
         }
 
         public int Donations { get; set; }
@@ -39,6 +33,6 @@ namespace CoreCodedChatbot.Library.Models.Data
         public int ReceivedGift { get; set; }
         public int UsedSuperVipRequests { get; set; }
 
-        public int TotalRemaining => (Donations + Follow + ModGiven + Sub + Byte + ReceivedGift) - (UsedSuperVipRequests * _config.SuperVipCost) - Used - SentGift;
+        public int TotalRemaining => (Donations + Follow + ModGiven + Sub + Byte + ReceivedGift) - (UsedSuperVipRequests * _superVipCost) - Used - SentGift;
     }
 }

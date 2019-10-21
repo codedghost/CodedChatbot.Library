@@ -14,7 +14,7 @@ namespace CoreCodedChatbot.Library
         {
             services.AddDbContextFactory();
 
-            services.AddTransient<IConfigService, ConfigService>();
+            services.AddSingleton<IConfigService, ConfigService>();
             
             services.AddSingleton<IGuessingGameService, GuessingGameService>();
             services.AddSingleton<IPlaylistService, PlaylistService>();

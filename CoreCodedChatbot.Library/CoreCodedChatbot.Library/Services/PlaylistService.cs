@@ -20,37 +20,36 @@ namespace CoreCodedChatbot.Library.Services
     {
         private const int UserMaxSongCount = 1;
 
-        private readonly ConfigModel config;
-        private readonly IChatbotContextFactory contextFactory;
-        private readonly IVipService vipService;
-        private readonly TwitchClient client;
+        private readonly IChatbotContextFactory _contextFactory;
+        private readonly IConfigService _configService;
+        private readonly IVipService _vipService;
+        private readonly ISecretService _secretService;
+        private readonly TwitchClient _client;
 
-        private string DevelopmentRoomId;
+        private string _developmentRoomId;
 
-        private PlaylistItem CurrentRequest;
-        private int CurrentVipRequestsPlayed;
-        private int ConcurrentVipSongsToPlay;
-        private Random rand = new Random();
+        private PlaylistItem _currentRequest;
+        private int _currentVipRequestsPlayed;
+        private int _concurrentVipSongsToPlay;
+        private Random _rand = new Random();
 
         public PlaylistService(IChatbotContextFactory contextFactory, IConfigService configService, IVipService vipService,
-            TwitchClient client)
+            ISecretService secretService, TwitchClient client)
         {
-            this.contextFactory = contextFactory;
-            this.config = configService.GetConfig();
-            this.vipService = vipService;
-            
-            this.client = client;
+            this._contextFactory = contextFactory;
+            _configService = configService;
 
-            this.ConcurrentVipSongsToPlay = config.ConcurrentRegularSongsToPlay;
-            
-            if (config.DevelopmentBuild)
-            {
-            }
+            this._vipService = vipService;
+            _secretService = secretService;
+
+            this._client = client;
+
+            this._concurrentVipSongsToPlay = configService.Get<int>("ConcurrentRegularSongsToPlay");
         }
 
         public PlaylistItem GetRequestById(int songId)
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var request = context.SongRequests.Find(songId);
                 return new PlaylistItem
@@ -77,7 +76,7 @@ namespace CoreCodedChatbot.Library.Services
             var playlistState = this.GetPlaylistState();
             if (playlistState == PlaylistState.VeryClosed) return (AddRequestResult.PlaylistVeryClosed, 0);
 
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var request = new SongRequest
                 {
@@ -111,9 +110,9 @@ namespace CoreCodedChatbot.Library.Services
                 songIndex = context.SongRequests.Where(sr => !sr.Played).OrderRequests()
                                 .FindIndex(sr => sr == request) + 1;
 
-                if (CurrentRequest == null)
+                if (_currentRequest == null)
                 {
-                    CurrentRequest = new PlaylistItem
+                    _currentRequest = new PlaylistItem
                     {
                         songRequestId = request.SongRequestId,
                         songRequestText = request.RequestText,
@@ -137,7 +136,7 @@ namespace CoreCodedChatbot.Library.Services
             var playlistState = GetPlaylistState();
             if (playlistState == PlaylistState.VeryClosed) return AddRequestResult.PlaylistVeryClosed;
 
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 if (IsSuperRequestInQueue()) return AddRequestResult.OnlyOneSuper;
 
@@ -154,9 +153,9 @@ namespace CoreCodedChatbot.Library.Services
                 context.SongRequests.Add(request);
                 context.SaveChanges();
 
-                if (CurrentRequest == null)
+                if (_currentRequest == null)
                 {
-                    CurrentRequest = new PlaylistItem
+                    _currentRequest = new PlaylistItem
                     {
                         songRequestId = request.SongRequestId,
                         songRequestText = request.RequestText,
@@ -192,7 +191,7 @@ namespace CoreCodedChatbot.Library.Services
                         return AddRequestResult.PlaylistClosed;
                 }
 
-                using (var context = contextFactory.Create())
+                using (var context = _contextFactory.Create())
                 {
                     if (!requestSongViewModel.IsVip && !requestSongViewModel.IsSuperVip)
                     {
@@ -216,12 +215,12 @@ namespace CoreCodedChatbot.Library.Services
                         request.VipRequestTime = DateTime.UtcNow;
                         request.SuperVipRequestTime = DateTime.UtcNow;
 
-                        if (!vipService.UseSuperVip(username)) return AddRequestResult.UnSuccessful;
+                        if (!_vipService.UseSuperVip(username)) return AddRequestResult.UnSuccessful;
                     }
                     else if (requestSongViewModel.IsVip)
                     {
                         request.VipRequestTime = DateTime.UtcNow;
-                        if (!vipService.UseVip(username)) return AddRequestResult.UnSuccessful;
+                        if (!_vipService.UseVip(username)) return AddRequestResult.UnSuccessful;
                     }
 
                     context.SongRequests.Add(request);
@@ -240,7 +239,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public PlaylistState GetPlaylistState()
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var status = context.Settings
                     .SingleOrDefault(set => set.SettingName == "PlaylistStatus");
@@ -256,7 +255,7 @@ namespace CoreCodedChatbot.Library.Services
         public int PromoteRequest(string username)
         {
             var newSongIndex = 0;
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var request = context.SongRequests.FirstOrDefault(sr => !sr.Played && sr.VipRequestTime == null && sr.RequestUsername == username);
 
@@ -279,10 +278,10 @@ namespace CoreCodedChatbot.Library.Services
 
         public async void UpdateFullPlaylist(bool updateCurrent = false)
         {
-            var psk = config.SignalRKey;
+            var psk = _secretService.GetSecret<string>("SignalRKey");
 
             var connection = new HubConnectionBuilder()
-                .WithUrl($"{config.WebPlaylistUrl}/SongList")
+                .WithUrl($"{_configService.Get<string>("WebPlaylistUrl")}/SongList")
                 .Build();
 
             await connection.StartAsync();
@@ -294,15 +293,15 @@ namespace CoreCodedChatbot.Library.Services
                 UpdateCurrentSong(requests.RegularList, requests.VipList);
             }
 
-            requests.RegularList = requests.RegularList.Where(r => r.songRequestId != CurrentRequest.songRequestId)
+            requests.RegularList = requests.RegularList.Where(r => r.songRequestId != _currentRequest.songRequestId)
                 .ToArray();
-            requests.VipList = requests.VipList.Where(r => r.songRequestId != CurrentRequest.songRequestId).ToArray();
+            requests.VipList = requests.VipList.Where(r => r.songRequestId != _currentRequest.songRequestId).ToArray();
 
             await connection.InvokeAsync<SongListHubModel>("SendAll",
                 new SongListHubModel
                 {
                     psk = psk,
-                    currentSong = CurrentRequest,
+                    currentSong = _currentRequest,
                     regularRequests = requests.RegularList,
                     vipRequests = requests.VipList
                 });
@@ -314,10 +313,10 @@ namespace CoreCodedChatbot.Library.Services
         {
             // SongId of zero indicates that the command has been called from twitch chat
 
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
-                var currentRequest = songId == 0 ? CurrentRequest :
-                    songId == CurrentRequest.songRequestId ? CurrentRequest : null;
+                var currentRequest = songId == 0 ? _currentRequest :
+                    songId == _currentRequest.songRequestId ? _currentRequest : null;
 
                 if (currentRequest == null)
                     return;
@@ -347,7 +346,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public List<string> GetUserRelevantRequests(string username)
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var userRequests = context.SongRequests
                     .Where(sr => !sr.Played)
@@ -367,7 +366,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public PlaylistViewModel GetAllSongs(LoggedInTwitchUser twitchUser = null)
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var vipRequests = context.SongRequests.Where(sr => !sr.Played && sr.VipRequestTime != null)
                     .OrderRequests()
@@ -410,22 +409,22 @@ namespace CoreCodedChatbot.Library.Services
                     }).ToArray();
 
                 // Ensure if the playlist is populated then a request is made current
-                if (CurrentRequest == null)
+                if (_currentRequest == null)
                 {
                     if (vipRequests.Any())
                     {
-                        CurrentRequest = vipRequests.First();
-                        vipRequests = vipRequests.Where(r => r.songRequestId != CurrentRequest.songRequestId).ToArray();
+                        _currentRequest = vipRequests.First();
+                        vipRequests = vipRequests.Where(r => r.songRequestId != _currentRequest.songRequestId).ToArray();
                     } else if (regularRequests.Any())
                     {
-                        CurrentRequest = regularRequests[rand.Next(0, regularRequests.Length)];
-                        regularRequests = regularRequests.Where(r => r.songRequestId != CurrentRequest.songRequestId).ToArray();
+                        _currentRequest = regularRequests[_rand.Next(0, regularRequests.Length)];
+                        regularRequests = regularRequests.Where(r => r.songRequestId != _currentRequest.songRequestId).ToArray();
                     }
                 }
 
                 return new PlaylistViewModel
                 {
-                    CurrentSong = CurrentRequest,
+                    CurrentSong = _currentRequest,
                     RegularList = regularRequests,
                     VipList = vipRequests,
                     TwitchUser = twitchUser
@@ -435,18 +434,18 @@ namespace CoreCodedChatbot.Library.Services
 
         public void ClearRockRequests()
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var requests = context.SongRequests.Where(sr => !sr.Played);
 
                 foreach (var request in requests)
                 {
-                    if (request.SuperVipRequestTime != null && request.SongRequestId != CurrentRequest?.songRequestId)
-                        vipService.RefundSuperVip(request.RequestUsername, true);
-                    else if (request.VipRequestTime != null && request.SongRequestId != CurrentRequest?.songRequestId)
-                        vipService.RefundVip(request.RequestUsername, true);
-                    if (request.SongRequestId == CurrentRequest?.songRequestId)
-                        CurrentRequest = null;
+                    if (request.SuperVipRequestTime != null && request.SongRequestId != _currentRequest?.songRequestId)
+                        _vipService.RefundSuperVip(request.RequestUsername, true);
+                    else if (request.VipRequestTime != null && request.SongRequestId != _currentRequest?.songRequestId)
+                        _vipService.RefundVip(request.RequestUsername, true);
+                    if (request.SongRequestId == _currentRequest?.songRequestId)
+                        _currentRequest = null;
 
                     request.Played = true;
                 }
@@ -462,7 +461,7 @@ namespace CoreCodedChatbot.Library.Services
             if (!int.TryParse(commandText.Trim(), out var playlistIndex))
             {
                 // Try and find regular request
-                using (var context = contextFactory.Create())
+                using (var context = _contextFactory.Create())
                 {
                     var userRequest = context.SongRequests
                         ?.FirstOrDefault(
@@ -476,7 +475,7 @@ namespace CoreCodedChatbot.Library.Services
                 }
             }
 
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 // We have a playlist number remove VIP
                 var userRequest = context.SongRequests
@@ -488,7 +487,7 @@ namespace CoreCodedChatbot.Library.Services
 
                 if (userRequest == null) return false;
 
-                vipService.RefundVip(userRequest.SongRequest.RequestUsername);
+                _vipService.RefundVip(userRequest.SongRequest.RequestUsername);
 
                 context.Remove(userRequest.SongRequest);
                 context.SaveChanges();
@@ -503,9 +502,9 @@ namespace CoreCodedChatbot.Library.Services
         {
             var currentSongs = GetAllSongs();
 
-            currentSongs.RegularList = currentSongs.RegularList.Where(r => r.songRequestId != CurrentRequest.songRequestId)
+            currentSongs.RegularList = currentSongs.RegularList.Where(r => r.songRequestId != _currentRequest.songRequestId)
                 .ToArray();
-            currentSongs.VipList = currentSongs.VipList.Where(r => r.songRequestId != CurrentRequest.songRequestId).ToArray();
+            currentSongs.VipList = currentSongs.VipList.Where(r => r.songRequestId != _currentRequest.songRequestId).ToArray();
 
             var processEditArgsResponse = ProcessEditArgs(username, commandText, currentSongs, out songRequestText);
 
@@ -534,7 +533,7 @@ namespace CoreCodedChatbot.Library.Services
                     return EditRequestResult.NoRequestEntered;
                 }
 
-                using (var context = contextFactory.Create())
+                using (var context = _contextFactory.Create())
                 {
                     var songRequest =
                         context.SongRequests.SingleOrDefault(sr => sr.SongRequestId == editRequestModel.SongRequestId);
@@ -565,14 +564,14 @@ namespace CoreCodedChatbot.Library.Services
             var vipIssued = false;
             try
             {
-                using (var context = contextFactory.Create())
+                using (var context = _contextFactory.Create())
                 {
                     var songRequest = context.SongRequests.SingleOrDefault(sr => sr.SongRequestId == songId);
 
                     if (songRequest == null) return PromoteRequestResult.UnSuccessful;
                     if (songRequest.RequestUsername != username) return PromoteRequestResult.NotYourRequest;
                     if (songRequest.VipRequestTime != null) return PromoteRequestResult.AlreadyVip;
-                    if (!vipService.UseVip(username)) return PromoteRequestResult.NoVipAvailable;
+                    if (!_vipService.UseVip(username)) return PromoteRequestResult.NoVipAvailable;
 
                     vipIssued = true;
                     songRequest.VipRequestTime = DateTime.UtcNow;
@@ -581,7 +580,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                if (vipIssued) vipService.RefundVip(username);
+                if (vipIssued) _vipService.RefundVip(username);
                 Console.WriteLine($"Exception in PromoteWebRequest\n{e} - {e.InnerException}");
                 return PromoteRequestResult.UnSuccessful;
             }
@@ -592,15 +591,15 @@ namespace CoreCodedChatbot.Library.Services
 
         public bool AddSongToDrive(int songId)
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var songRequest = context.SongRequests.SingleOrDefault(sr => sr.SongRequestId == songId);
 
                 if (songRequest == null) return false;
                 songRequest.InDrive = true;
 
-                if (songRequest.SongRequestId == CurrentRequest.songRequestId)
-                    CurrentRequest.isInDrive = true;
+                if (songRequest.SongRequestId == _currentRequest.songRequestId)
+                    _currentRequest.isInDrive = true;
 
                 context.SaveChanges();
             }
@@ -621,14 +620,14 @@ namespace CoreCodedChatbot.Library.Services
                 SelectedInstrument = string.Empty,
                 IsVip = false,
                 IsSuperVip = false,
-                ShouldShowVip = vipService.HasVip(username),
-                ShouldShowSuperVip = vipService.HasSuperVip(username) && !IsSuperRequestInQueue()
+                ShouldShowVip = _vipService.HasVip(username),
+                ShouldShowSuperVip = _vipService.HasSuperVip(username) && !IsSuperRequestInQueue()
             };
         }
 
         public bool IsSuperRequestInQueue()
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 return context.SongRequests.Any(sr => !sr.Played && sr.SuperVipRequestTime != null);
             }
@@ -640,12 +639,12 @@ namespace CoreCodedChatbot.Library.Services
             {
                 if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(songText)) return string.Empty;
 
-                using (var context = contextFactory.Create())
+                using (var context = _contextFactory.Create())
                 {
                     var usersSuperVip = context.SongRequests.SingleOrDefault(sr =>
                         !sr.Played && sr.RequestUsername == username && sr.SuperVipRequestTime != null);
 
-                    if (usersSuperVip == null || usersSuperVip.SongRequestId == CurrentRequest.songRequestId) return string.Empty;
+                    if (usersSuperVip == null || usersSuperVip.SongRequestId == _currentRequest.songRequestId) return string.Empty;
                     
                     usersSuperVip.RequestText = songText;
                     context.SaveChanges();
@@ -668,15 +667,15 @@ namespace CoreCodedChatbot.Library.Services
             {
                 if (string.IsNullOrWhiteSpace(username)) return false;
 
-                using (var context = contextFactory.Create())
+                using (var context = _contextFactory.Create())
                 {
                     var usersSuperVip = context.SongRequests.SingleOrDefault(sr =>
                         !sr.Played && sr.RequestUsername == username && sr.SuperVipRequestTime != null);
 
-                    if (usersSuperVip == null || usersSuperVip.SongRequestId == CurrentRequest.songRequestId)
+                    if (usersSuperVip == null || usersSuperVip.SongRequestId == _currentRequest.songRequestId)
                         return false;
 
-                    if (!vipService.RefundSuperVip(username)) return false;
+                    if (!_vipService.RefundSuperVip(username)) return false;
 
                     usersSuperVip.Played = true;
                     context.SaveChanges();
@@ -695,7 +694,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public RequestSongViewModel GetEditRequestSongViewModel(string username, int songRequestId, bool isMod)
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var songRequest = context.SongRequests.SingleOrDefault(sr =>
                     !sr.Played && (sr.RequestUsername == username || isMod) && sr.SongRequestId == songRequestId);
@@ -725,7 +724,7 @@ namespace CoreCodedChatbot.Library.Services
         {
             var isPlaylistOpened = OpenPlaylist();
 
-            client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? config.StreamerChannel : DevelopmentRoomId,
+            _client.SendMessage(string.IsNullOrEmpty(_developmentRoomId) ? _configService.Get<string>("StreamerChannel") : _developmentRoomId,
                 isPlaylistOpened ? "The playlist is now open!" : "I couldn't open the playlist :(");
 
             return true;
@@ -735,7 +734,7 @@ namespace CoreCodedChatbot.Library.Services
         {
             var isPlaylistClosed = VeryClosePlaylist();
 
-            client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? config.StreamerChannel : DevelopmentRoomId,
+            _client.SendMessage(string.IsNullOrEmpty(_developmentRoomId) ? _configService.Get<string>("StreamerChannel") : _developmentRoomId,
                 isPlaylistClosed ? "The playlist is now closed!" : "I couldn't close the playlist :(");
 
             return true;
@@ -743,7 +742,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public bool OpenPlaylist()
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 try
                 {
@@ -776,7 +775,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public bool ClosePlaylist()
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 try
                 {
@@ -810,7 +809,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public bool ArchiveRequestById(int songId)
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 var request = context.SongRequests.Find(songId);
 
@@ -820,11 +819,11 @@ namespace CoreCodedChatbot.Library.Services
 
                 if (request.SuperVipRequestTime != null)
                 {
-                    vipService.RefundSuperVip(request.RequestUsername);
+                    _vipService.RefundSuperVip(request.RequestUsername);
                 }
                 if (request.VipRequestTime != null)
                 {
-                    vipService.RefundVip(request.RequestUsername);
+                    _vipService.RefundVip(request.RequestUsername);
                 }
 
                 context.SaveChanges();
@@ -837,7 +836,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public string GetEstimatedTime(ChatViewersModel chattersModel)
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 try
                 {
@@ -870,25 +869,25 @@ namespace CoreCodedChatbot.Library.Services
             var inChatRegularRequests = regularRequests.Where(r => r.isInChat).ToList();
             if (!inChatRegularRequests.Any() && !vipRequests.Any())
             {
-                CurrentRequest = null;
+                _currentRequest = null;
                 return;
             }
 
-            if (CurrentRequest.isVip)
+            if (_currentRequest.isVip)
             {
-                CurrentVipRequestsPlayed++;
+                _currentVipRequestsPlayed++;
                 if (vipRequests.Any(vr => vr.isSuperVip))
                 {
                     updateDecision = RequestTypes.SuperVip;
                 }
-                else if (CurrentVipRequestsPlayed < ConcurrentVipSongsToPlay
+                else if (_currentVipRequestsPlayed < _concurrentVipSongsToPlay
                     && vipRequests.Any())
                 {
                     updateDecision = RequestTypes.Vip;
                 }
                 else if (inChatRegularRequests.Any())
                 {
-                    CurrentVipRequestsPlayed = 0;
+                    _currentVipRequestsPlayed = 0;
                     updateDecision = RequestTypes.Regular;
                 }
                 else if (vipRequests.Any())
@@ -923,16 +922,16 @@ namespace CoreCodedChatbot.Library.Services
             switch (updateDecision)
             {
                 case RequestTypes.Regular:
-                    CurrentRequest = inChatRegularRequests[rand.Next(inChatRegularRequests.Count)];
+                    _currentRequest = inChatRegularRequests[_rand.Next(inChatRegularRequests.Count)];
                     break;
                 case RequestTypes.Vip:
-                    CurrentRequest = vipRequests.FirstOrDefault();
+                    _currentRequest = vipRequests.FirstOrDefault();
                     break;
                 case RequestTypes.SuperVip:
-                    CurrentRequest = vipRequests.FirstOrDefault(vr => vr.isSuperVip);
+                    _currentRequest = vipRequests.FirstOrDefault(vr => vr.isSuperVip);
                     break;
                 case RequestTypes.Empty:
-                    CurrentRequest = null;
+                    _currentRequest = null;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -946,7 +945,7 @@ namespace CoreCodedChatbot.Library.Services
 
         public bool VeryClosePlaylist()
         {
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 try
                 {
@@ -998,7 +997,7 @@ namespace CoreCodedChatbot.Library.Services
             var vipRequestsWithIndex =
                 currentSongs.VipList.Select((sr, index) => new { Index = index + 1, SongRequest = sr }).ToList();
 
-            using (var context = contextFactory.Create())
+            using (var context = _contextFactory.Create())
             {
                 PlaylistItem request;
                 switch (action)
