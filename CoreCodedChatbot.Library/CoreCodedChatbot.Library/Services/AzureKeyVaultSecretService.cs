@@ -18,11 +18,9 @@ namespace CoreCodedChatbot.Library.Services
 
         public AzureKeyVaultSecretService(IConfigService configService)
         {
-            var config = configService.GetConfig();
-
-            _appId = config.KeyVaultAppId;
-            _certThumbprint = config.KeyVaultCertThumbprint;
-            _baseUrl = config.KeyVaultBaseUrl;
+            _appId = configService.Get<string>("KeyVaultAppId");
+            _certThumbprint = configService.Get<string>("KeyVaultCertThumbprint");
+            _baseUrl = configService.Get<string>("KeyVaultBaseUrl");
         }
 
         public async Task Initialize()

@@ -10,12 +10,12 @@ namespace CoreCodedChatbot.Library.Services
     public class VipService : IVipService
     {
         private IChatbotContextFactory chatbotContextFactory;
-        private ConfigModel config;
+        private readonly IConfigService _configService;
 
         public VipService(IChatbotContextFactory chatbotContextFactory, IConfigService configService)
         {
             this.chatbotContextFactory = chatbotContextFactory;
-            this.config = configService.GetConfig();
+            _configService = configService;
         }
 
         public bool GiftVip(string donorUsername, string receiverUsername)
@@ -62,7 +62,7 @@ namespace CoreCodedChatbot.Library.Services
 
                     if (user == null) return false;
 
-                    user.ModGivenVipRequests += config.SuperVipCost;
+                    user.ModGivenVipRequests += _configService.Get<int>("SuperVipCost");
 
                     if (!deferSave) context.SaveChanges();
                 }
@@ -82,7 +82,7 @@ namespace CoreCodedChatbot.Library.Services
             {
                 var user = GetUser(username);
 
-                return user != null && VipRequests.Create(user, config).TotalRemaining > 0;
+                return user != null && new VipRequests(_configService, user).TotalRemaining > 0;
             }
             catch (Exception e)
             {
@@ -121,7 +121,7 @@ namespace CoreCodedChatbot.Library.Services
             {
                 var user = GetUser(username);
 
-                return user != null && VipRequests.Create(user, config).TotalRemaining > config.SuperVipCost;
+                return user != null && new VipRequests(_configService, user).TotalRemaining > _configService.Get<int>("SuperVipCost");
             }
             catch (Exception e)
             {

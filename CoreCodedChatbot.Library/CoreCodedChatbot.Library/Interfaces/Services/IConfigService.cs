@@ -4,6 +4,6 @@ namespace CoreCodedChatbot.Library.Interfaces.Services
 {
     public interface IConfigService
     {
-        ConfigModel GetConfig();
+        T Get<T>(string configKey);
     }
 }

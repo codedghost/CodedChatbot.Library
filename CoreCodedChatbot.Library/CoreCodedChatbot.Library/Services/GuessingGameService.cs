@@ -15,8 +15,11 @@ namespace CoreCodedChatbot.Library.Services
     {
         private readonly TwitchClient Client;
         private readonly TwitchAPI Api;
-        private readonly ConfigModel Config;
+        private readonly IConfigService _configService;
         private IChatbotContextFactory contextFactory;
+
+        private string _streamerChannel;
+        private int _secondsForGuessingGame;
 
         private string DevelopmentRoomId;
 
@@ -28,11 +31,14 @@ namespace CoreCodedChatbot.Library.Services
             this.contextFactory = contextFactory;
             this.Client = client;
             this.Api = api;
-            this.Config = configService.GetConfig();
+            _configService = configService;
 
-            if (Config.DevelopmentBuild)
+            _streamerChannel = _configService.Get<string>("StreamerChannel");
+            _secondsForGuessingGame = configService.Get<int>("SecondsForGuessingGame");
+
+            if (_configService.Get<bool>("DevelopmentBuild"))
             {
-                Api.V5.Chat.GetChatRoomsByChannelAsync(Config.ChannelId, Config.ChatbotAccessToken)
+                Api.V5.Chat.GetChatRoomsByChannelAsync(_configService.Get<string>("ChannelId"), _configService.Get<string>("ChatbotAccessToken"))
                     .ContinueWith(
                         rooms =>
                         {
@@ -49,11 +55,11 @@ namespace CoreCodedChatbot.Library.Services
 
         private async void InitialiseGameTimer(string songName, int songLengthInSeconds)
         {
-            if (Config.DevelopmentBuild && !Client.JoinedChannels.Select(jc => jc.Channel)
+            if (_configService.Get<bool>("DevelopmentBuild") && !Client.JoinedChannels.Select(jc => jc.Channel)
                     .Any(jc => jc.Contains(DevelopmentRoomId)))
-                Client.JoinRoom(Config.ChannelId, DevelopmentRoomId);
+                Client.JoinRoom(_configService.Get<string>("ChannelId"), DevelopmentRoomId);
 
-            if (songLengthInSeconds < Config.SecondsForGuessingGame)
+            if (songLengthInSeconds < _secondsForGuessingGame)
             {
                 return;
             }
@@ -61,23 +67,23 @@ namespace CoreCodedChatbot.Library.Services
             if (!OpenGuessingGame(songName))
             {
                 
-                Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? Config.StreamerChannel : DevelopmentRoomId, "I couldn't start the guessing game :S");
+                Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? _streamerChannel : DevelopmentRoomId, "I couldn't start the guessing game :S");
                 return;
             }
 
             SetGuessingGameState(true);
 
-            Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? Config.StreamerChannel : DevelopmentRoomId,
-                $"The guessing game has begun! You have {Config.SecondsForGuessingGame} seconds to !guess the accuracy that {Config.StreamerChannel} will get on {songName}!");
+            Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? _streamerChannel : DevelopmentRoomId,
+                $"The guessing game has begun! You have {_secondsForGuessingGame} seconds to !guess the accuracy that {_streamerChannel} will get on {songName}!");
 
-            await Task.Delay(TimeSpan.FromSeconds(Config.SecondsForGuessingGame));
+            await Task.Delay(TimeSpan.FromSeconds(_secondsForGuessingGame));
 
             if (!CloseGuessingGame())
             {
-                Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? Config.StreamerChannel : DevelopmentRoomId, "I couldn't close the guessing game for some reason... SEND HALP");
+                Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? _streamerChannel : DevelopmentRoomId, "I couldn't close the guessing game for some reason... SEND HALP");
             }
 
-            Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? Config.StreamerChannel : DevelopmentRoomId, "The guessing game has now closed. Good luck everyone!");
+            Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? _streamerChannel : DevelopmentRoomId, "The guessing game has now closed. Good luck everyone!");
 
             SetGuessingGameState(false);
         }
@@ -185,18 +191,18 @@ namespace CoreCodedChatbot.Library.Services
 
             // No-one guessed?
             if (!potentialWinnerModels.Any())
-                Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? Config.StreamerChannel : DevelopmentRoomId, "Nobody guessed! Good luck next time :)");
+                Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? _streamerChannel : DevelopmentRoomId, "Nobody guessed! Good luck next time :)");
 
             var winners = GuessingGameWinner.Create(potentialWinnerModels);
 
             // TODO: URGENT -> Refactor this to own service when bytes service is brought over to library project.
             GiveBytes(winners.Where(w => w.Difference <= 20).ToList());
             
-            Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? Config.StreamerChannel : DevelopmentRoomId,
+            Client.SendMessage(string.IsNullOrEmpty(DevelopmentRoomId) ? _streamerChannel : DevelopmentRoomId,
                 winners[0].Difference > 20 ?
                     $"@{string.Join(", @", winners.Select(w=> w.Username))} has won... nothing!" +
                     $" {string.Join(", ", winners.Select(w => $"{w.Username} guessed {w.Guess}%"))} " +
-                    $"You were {winners[0].Difference} away from the actual score. Do you even know {Config.StreamerChannel}?"
+                    $"You were {winners[0].Difference} away from the actual score. Do you even know {_streamerChannel}?"
                     : winners[0].Difference == 0
                         ? $"@{string.Join(", @", winners.Select(w => w.Username))} has won! You guessed {winners[0].Guess}. You were spot on! You've received {winners[0].BytesWon} bytes"
                         : $"@{string.Join(", @", winners.Select(w => w.Username))} has won! " +
@@ -229,7 +235,7 @@ namespace CoreCodedChatbot.Library.Services
                         context.Users.Add(user);
                     }
 
-                    user.TokenBytes += (int) Math.Round(winner.BytesWon * Config.BytesToVip);
+                    user.TokenBytes += (int) Math.Round(winner.BytesWon * _configService.Get<int>("BytesToVip"));
                 }
 
                 context.SaveChanges();
