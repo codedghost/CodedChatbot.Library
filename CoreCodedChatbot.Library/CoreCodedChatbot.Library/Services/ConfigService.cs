@@ -24,12 +24,12 @@ namespace CoreCodedChatbot.Library.Services
 
         public T Get<T>(string configKey)
         {
-            var configString = _configRoot[$"AppSettings:{configKey}"];
+            var configString = _configRoot.GetSection($"AppSettings:{configKey}");
 
-            if (string.IsNullOrWhiteSpace(configString))
+            if (string.IsNullOrWhiteSpace(configString.Value))
                 return default(T);
 
-            return (T)Convert.ChangeType(configString, typeof(T));
+            return (T)Convert.ChangeType(configString.Value, typeof(T));
         }
     }
 }
