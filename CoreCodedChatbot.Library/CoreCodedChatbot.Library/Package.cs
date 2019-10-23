@@ -13,15 +13,11 @@ namespace CoreCodedChatbot.Library
         public static IServiceCollection AddLibraryServices(this IServiceCollection services)
         {
             services.AddDbContextFactory();
-
-            services.AddSingleton<IConfigService, ConfigService>();
             
             services.AddSingleton<IGuessingGameService, GuessingGameService>();
             services.AddSingleton<IPlaylistService, PlaylistService>();
             services.AddSingleton<IStreamStatusService, StreamStatusService>();
             services.AddSingleton<IVipService, VipService>();
-
-            services.AddSingleton<ISecretService, AzureKeyVaultSecretService>();
 
             return services;
         }
