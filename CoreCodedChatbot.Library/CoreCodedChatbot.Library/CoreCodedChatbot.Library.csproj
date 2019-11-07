@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="CoreCodedChatbot.Config" Version="1.0.296" />
-    <PackageReference Include="CoreCodedChatbot.Database" Version="1.0.315" />
+    <PackageReference Include="CoreCodedChatbot.Database" Version="1.0.319" />
     <PackageReference Include="CoreCodedChatbot.Secrets" Version="1.0.317" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="1.0.4" />
