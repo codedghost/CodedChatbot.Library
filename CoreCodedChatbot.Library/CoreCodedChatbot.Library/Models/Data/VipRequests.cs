@@ -1,6 +1,5 @@
 ﻿using CoreCodedChatbot.Config;
 using CoreCodedChatbot.Database.Context.Models;
-using CoreCodedChatbot.Library.Helpers;
 using CoreCodedChatbot.Library.Interfaces.Services;
 
 namespace CoreCodedChatbot.Library.Models.Data

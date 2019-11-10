@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using CoreCodedChatbot.ApiContract.Enums.Playlist;
 using CoreCodedChatbot.Library.Models.Data;
 using CoreCodedChatbot.Library.Models.Enums;
 using CoreCodedChatbot.Library.Models.View;
