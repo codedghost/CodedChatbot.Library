@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
+using CoreCodedChatbot.ApiContract.RequestModels.StreamStatus;
 using CoreCodedChatbot.Database.Context.Interfaces;
 using CoreCodedChatbot.Database.Context.Models;
 using CoreCodedChatbot.Library.Interfaces.Services;
-using CoreCodedChatbot.Library.Models.ApiRequest.StreamStatus;
 
 namespace CoreCodedChatbot.Library.Services
 {

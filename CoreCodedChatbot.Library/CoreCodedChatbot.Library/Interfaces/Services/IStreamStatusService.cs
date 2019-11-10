@@ -1,4 +1,4 @@
-﻿using CoreCodedChatbot.Library.Models.ApiRequest.StreamStatus;
+﻿using CoreCodedChatbot.ApiContract.RequestModels.StreamStatus;
 
 namespace CoreCodedChatbot.Library.Interfaces.Services
 {
