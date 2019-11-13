@@ -5,18 +5,24 @@ using CoreCodedChatbot.Database.Context.Interfaces;
 using CoreCodedChatbot.Database.Context.Models;
 using CoreCodedChatbot.Library.Interfaces.Services;
 using CoreCodedChatbot.Library.Models.Data;
+using Microsoft.Extensions.Logging;
 
 namespace CoreCodedChatbot.Library.Services
 {
     public class VipService : IVipService
     {
-        private IChatbotContextFactory chatbotContextFactory;
+        private IChatbotContextFactory _chatbotContextFactory;
         private readonly IConfigService _configService;
+        private readonly ILogger<IVipService> _logger;
 
-        public VipService(IChatbotContextFactory chatbotContextFactory, IConfigService configService)
+        public VipService(
+            IChatbotContextFactory chatbotContextFactory, 
+            IConfigService configService,
+            ILogger<IVipService> logger)
         {
-            this.chatbotContextFactory = chatbotContextFactory;
+            _chatbotContextFactory = chatbotContextFactory;
             _configService = configService;
+            _logger = logger;
         }
 
         public bool GiftVip(string donorUsername, string receiverUsername)
@@ -33,7 +39,7 @@ namespace CoreCodedChatbot.Library.Services
         {
             try
             {
-                using (var context = chatbotContextFactory.Create())
+                using (var context = _chatbotContextFactory.Create())
                 {
                     var user = context.Users.SingleOrDefault(u => u.Username == username);
 
@@ -48,7 +54,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when refunding Vip token. username: {username}, defersave: {deferSave}");
                 return false;
             }
         }
@@ -57,7 +63,7 @@ namespace CoreCodedChatbot.Library.Services
         {
             try
             {
-                using (var context = chatbotContextFactory.Create())
+                using (var context = _chatbotContextFactory.Create())
                 {
                     var user = context.Users.SingleOrDefault(u => u.Username == username);
 
@@ -72,7 +78,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when refunding Super Vip. username: {username}, deferSave: {deferSave}");
                 return false;
             }
         }
@@ -87,8 +93,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("HasVip Exception:");
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when checking if User has a Vip token. username: {username}");
                 return false;
             }
         }
@@ -99,7 +104,7 @@ namespace CoreCodedChatbot.Library.Services
             {
                 if (!HasVip(username)) return false;
 
-                using (var context = chatbotContextFactory.Create())
+                using (var context = _chatbotContextFactory.Create())
                 {
                     var user = context.Users.Find(username);
 
@@ -109,7 +114,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"UseVIP Exception\n{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when attempting to deduct a user's Vip token. username: {username}");
                 return false;
             }
 
@@ -126,8 +131,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("HasSuperVip Exception:");
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when checking if a user has enough for a Super Vip token. username: {username}");
                 return false;
             }
         }
@@ -138,7 +142,7 @@ namespace CoreCodedChatbot.Library.Services
             {
                 if (!HasSuperVip(username)) return false;
 
-                using (var context = chatbotContextFactory.Create())
+                using (var context = _chatbotContextFactory.Create())
                 {
                     var user = context.Users.Find(username);
 
@@ -148,7 +152,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"UseSuperVIP Exception\n{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when attempting to deduct a user's Super Vip token. username: {username}");
                 return false;
             }
 
@@ -159,7 +163,7 @@ namespace CoreCodedChatbot.Library.Services
         {
             try
             {
-                using (var context = chatbotContextFactory.Create())
+                using (var context = _chatbotContextFactory.Create())
                 {
                     var user = GetUser(username);
 
@@ -169,7 +173,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine($"ModGiveVIP Exception\n{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when a mod has attempted to give 1 or more Vips to a user. username: {username}, numberOfVips: {numberOfVips}");
                 return false;
             }
 
@@ -182,7 +186,7 @@ namespace CoreCodedChatbot.Library.Services
             {
                 if (!HasVip(donor.Username)) return false;
 
-                using (var context = chatbotContextFactory.Create())
+                using (var context = _chatbotContextFactory.Create())
                 {
                     var donorUser = context.Users.Find(donor.Username);
                     var receiverUser = context.Users.Find(receiver.Username);
@@ -197,7 +201,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when Gifting a Vip. DonorUsername: {donor.Username}, ReceiverUsername: {receiver.Username}");
                 return false;
             }
 
@@ -206,7 +210,7 @@ namespace CoreCodedChatbot.Library.Services
 
         private User GetUser(string username, bool createUser = true)
         {
-            using (var context = chatbotContextFactory.Create())
+            using (var context = _chatbotContextFactory.Create())
             {
                 var user = context.Users.Find(username.ToLower());
 
