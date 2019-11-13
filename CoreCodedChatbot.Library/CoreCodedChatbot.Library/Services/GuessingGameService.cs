@@ -7,6 +7,7 @@ using CoreCodedChatbot.Database.Context.Interfaces;
 using CoreCodedChatbot.Database.Context.Models;
 using CoreCodedChatbot.Library.Interfaces.Services;
 using CoreCodedChatbot.Library.Models.Data;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Api;
 using TwitchLib.Client;
 
@@ -17,6 +18,7 @@ namespace CoreCodedChatbot.Library.Services
         private readonly TwitchClient Client;
         private readonly TwitchAPI Api;
         private readonly IConfigService _configService;
+        private readonly ILogger<IGuessingGameService> _logger;
         private IChatbotContextFactory contextFactory;
 
         private string _streamerChannel;
@@ -27,12 +29,14 @@ namespace CoreCodedChatbot.Library.Services
         private const string GuessingGameStateSettingKey = "IsGuessingGameInProgress";
         
         public GuessingGameService(IChatbotContextFactory contextFactory,
-            TwitchClient client, TwitchAPI api, IConfigService configService)
+            TwitchClient client, TwitchAPI api, IConfigService configService,
+            ILogger<IGuessingGameService> logger)
         {
             this.contextFactory = contextFactory;
             this.Client = client;
             this.Api = api;
             _configService = configService;
+            _logger = logger;
 
             _streamerChannel = _configService.Get<string>("StreamerChannel");
             _secondsForGuessingGame = configService.Get<int>("SecondsForGuessingGame");
@@ -112,7 +116,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Encountered an error, returning false. SongName: {songName}");
                 return false;
             }
         }
@@ -127,7 +131,7 @@ namespace CoreCodedChatbot.Library.Services
 
                     if (!currentGuessingGameRecords.Any())
                     {
-                        Console.WriteLine("Looks like this game is already closed");
+                        _logger.LogInformation("Looks like this game is already closed");
                         return false;
                     }
 
@@ -135,7 +139,7 @@ namespace CoreCodedChatbot.Library.Services
 
                     if (currentGuessingGameRecord == null)
                     {
-                        Console.WriteLine("This really shouldn't happen");
+                        _logger.LogWarning("This really shouldn't happen, currentGuessingGameRecord is null");
                         return false;
                     }
 
@@ -147,7 +151,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, "Encountered an error while closing the guessing game, returning false");
                 return false;
             }
         }
@@ -162,7 +166,7 @@ namespace CoreCodedChatbot.Library.Services
 
                     if (currentGuessingGameRecord == null)
                     {
-                        Console.WriteLine(
+                        _logger.LogWarning(
                             "Either the game has already been completed or there is currently more than 1 guessing game running");
                         return false;
                     }
@@ -178,7 +182,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Encountered an error when setting percentage and finishing guessing game. finalPercentage: {finalPercentage}");
                 return false;
             }
         }
@@ -291,7 +295,8 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogInformation(e,
+                    $"Encountered an error while trying to record a user's guess for the guessing game. username: {username}, percentageguess: {percentageGuess}");
                 return false;
             }
         }
@@ -337,7 +342,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.Out.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error encountered when checking if there was a guessing game in progress.");
                 return true;
             }
         }
@@ -369,7 +374,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.Out.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error encountered when setting the GuessingGameState. State: {state}");
                 return false;
             }
         }

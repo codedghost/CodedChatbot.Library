@@ -4,16 +4,21 @@ using CoreCodedChatbot.ApiContract.RequestModels.StreamStatus;
 using CoreCodedChatbot.Database.Context.Interfaces;
 using CoreCodedChatbot.Database.Context.Models;
 using CoreCodedChatbot.Library.Interfaces.Services;
+using Microsoft.Extensions.Logging;
 
 namespace CoreCodedChatbot.Library.Services
 {
     public class StreamStatusService : IStreamStatusService
     {
         private readonly IChatbotContextFactory _chatbotContextFactory;
+        private readonly ILogger<IStreamStatusService> _logger;
 
-        public StreamStatusService(IChatbotContextFactory chatbotContextFactory)
+        public StreamStatusService(
+            IChatbotContextFactory chatbotContextFactory,
+            ILogger<IStreamStatusService> logger)
         {
             _chatbotContextFactory = chatbotContextFactory;
+            _logger = logger;
         }
 
         public bool GetStreamStatus(string broadcasterUsername)
@@ -57,8 +62,8 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine(
-                    $"Exception caught when saving Stream Status. Exception: {e} - {e.InnerException}");
+                _logger.LogError(e,
+                    $"Exception caught when saving Stream Status. broadcasterUsername: {putStreamStatusRequest.BroadcasterUsername}, isOnline: {putStreamStatusRequest.IsOnline}");
 
                 return false;
             }

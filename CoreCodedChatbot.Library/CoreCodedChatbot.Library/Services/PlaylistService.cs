@@ -14,6 +14,7 @@ using CoreCodedChatbot.Library.Models.View;
 using CoreCodedChatbot.Secrets;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Api;
 using TwitchLib.Client;
 
@@ -28,6 +29,7 @@ namespace CoreCodedChatbot.Library.Services
         private readonly IVipService _vipService;
         private readonly ISecretService _secretService;
         private readonly TwitchClient _client;
+        private readonly ILogger<IPlaylistService> _logger;
 
         private string _developmentRoomId;
 
@@ -37,7 +39,8 @@ namespace CoreCodedChatbot.Library.Services
         private Random _rand = new Random();
 
         public PlaylistService(IChatbotContextFactory contextFactory, IConfigService configService, IVipService vipService,
-            ISecretService secretService, TwitchClient client)
+            ISecretService secretService, TwitchClient client,
+            ILogger<IPlaylistService> logger)
         {
             this._contextFactory = contextFactory;
             _configService = configService;
@@ -46,6 +49,7 @@ namespace CoreCodedChatbot.Library.Services
             _secretService = secretService;
 
             this._client = client;
+            _logger = logger;
 
             this._concurrentVipSongsToPlay = configService.Get<int>("ConcurrentRegularSongsToPlay");
         }
@@ -93,7 +97,7 @@ namespace CoreCodedChatbot.Library.Services
                 {
                     var playlistLength = context.SongRequests.Count(sr => !sr.Played);
                     var userSongCount = context.SongRequests.Count(sr => !sr.Played && sr.RequestUsername == username && sr.VipRequestTime == null);
-                    Console.Out.WriteLine($"Not a vip request: {playlistLength}, {userSongCount}");
+                    _logger.LogInformation($"Not a vip request: {playlistLength}, {userSongCount}");
                     if (playlistState == PlaylistState.Closed)
                     {
                         return (AddRequestResult.PlaylistClosed, 0);
@@ -329,7 +333,7 @@ namespace CoreCodedChatbot.Library.Services
                 if (currentRequestDbModel == null)
                     return;
 
-                Console.Out.WriteLine(currentRequestDbModel.RequestText);
+                _logger.LogInformation($"Removing request: {currentRequestDbModel.RequestText}");
 
                 currentRequestDbModel.Played = true;
                 context.SaveChanges();
@@ -553,7 +557,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Exception in EditWebRequest\n{e} - {e.InnerException}");
+                _logger.LogError(e, $"Exception in EditWebRequest. editRequestModel: {editRequestModel}, username: {username}, isMod: {isMod}");
                 return EditRequestResult.UnSuccessful;
             }
             
@@ -584,7 +588,7 @@ namespace CoreCodedChatbot.Library.Services
             catch (Exception e)
             {
                 if (vipIssued) _vipService.RefundVip(username);
-                Console.WriteLine($"Exception in PromoteWebRequest\n{e} - {e.InnerException}");
+                _logger.LogError(e, $"Exception in EditWebRequest. songId: {songId}, username: {username}");
                 return PromoteRequestResult.UnSuccessful;
             }
 
@@ -659,7 +663,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when editing a super vip request. username: {username}, songText: {songText}");
                 return string.Empty;
             }
         }
@@ -690,7 +694,7 @@ namespace CoreCodedChatbot.Library.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{e} - {e.InnerException}");
+                _logger.LogError(e, $"Error when removing Super Vip request. username: {username}");
                 return false;
             }
         }
@@ -804,7 +808,7 @@ namespace CoreCodedChatbot.Library.Services
                 }
                 catch (Exception e)
                 {
-                    Console.Out.WriteLine(e.ToString());
+                    _logger.LogError(e, "Error when closing the playlist");
                     return false;
                 }
             }
@@ -859,7 +863,7 @@ namespace CoreCodedChatbot.Library.Services
                 }
                 catch (Exception e)
                 {
-                    Console.Out.WriteLine(e);
+                    _logger.LogError(e, "Error when calculating estimated time remaining in the playlist");
                     return string.Empty;
                 }
             }
@@ -974,7 +978,7 @@ namespace CoreCodedChatbot.Library.Services
                 }
                 catch (Exception e)
                 {
-                    Console.Out.WriteLine(e.ToString());
+                    _logger.LogError(e, "Error encountered when closing the playlist completely");
                     return false;
                 }
             }
