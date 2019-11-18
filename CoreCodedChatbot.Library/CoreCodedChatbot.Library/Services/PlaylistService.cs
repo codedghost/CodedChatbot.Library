@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using CoreCodedChatbot.ApiContract.Enums.Playlist;
+using CoreCodedChatbot.ApiContract.ResponseModels.Playlist;
+using CoreCodedChatbot.ApiContract.ResponseModels.Playlist.ChildModels;
+using CoreCodedChatbot.ApiContract.SignalRHubModels;
 using CoreCodedChatbot.Config;
 using CoreCodedChatbot.Database.Context.Interfaces;
 using CoreCodedChatbot.Database.Context.Models;
@@ -9,7 +12,6 @@ using CoreCodedChatbot.Library.Extensions;
 using CoreCodedChatbot.Library.Interfaces.Services;
 using CoreCodedChatbot.Library.Models.Data;
 using CoreCodedChatbot.Library.Models.Enums;
-using CoreCodedChatbot.Library.Models.SignalR;
 using CoreCodedChatbot.Library.Models.View;
 using CoreCodedChatbot.Secrets;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -371,7 +373,7 @@ namespace CoreCodedChatbot.Library.Services
             }
         }
 
-        public PlaylistViewModel GetAllSongs(LoggedInTwitchUser twitchUser = null)
+        public GetAllSongsResponse GetAllSongs()
         {
             using (var context = _contextFactory.Create())
             {
@@ -429,12 +431,11 @@ namespace CoreCodedChatbot.Library.Services
                     }
                 }
 
-                return new PlaylistViewModel
+                return new GetAllSongsResponse
                 {
                     CurrentSong = _currentRequest,
                     RegularList = regularRequests,
-                    VipList = vipRequests,
-                    TwitchUser = twitchUser
+                    VipList = vipRequests
                 };
             }
         }
@@ -615,23 +616,6 @@ namespace CoreCodedChatbot.Library.Services
             return true;
         }
 
-        public RequestSongViewModel GetNewRequestSongViewModel(string username)
-        {
-            return new RequestSongViewModel
-            {
-                ModalTitle = "Request a song",
-                IsNewRequest = true,
-                Title = string.Empty,
-                Artist = string.Empty,
-                Instruments = GetRequestInstruments(),
-                SelectedInstrument = string.Empty,
-                IsVip = false,
-                IsSuperVip = false,
-                ShouldShowVip = _vipService.HasVip(username),
-                ShouldShowSuperVip = _vipService.HasSuperVip(username) && !IsSuperRequestInQueue()
-            };
-        }
-
         public bool IsSuperRequestInQueue()
         {
             using (var context = _contextFactory.Create())
@@ -696,34 +680,6 @@ namespace CoreCodedChatbot.Library.Services
             {
                 _logger.LogError(e, $"Error when removing Super Vip request. username: {username}");
                 return false;
-            }
-        }
-
-        public RequestSongViewModel GetEditRequestSongViewModel(string username, int songRequestId, bool isMod)
-        {
-            using (var context = _contextFactory.Create())
-            {
-                var songRequest = context.SongRequests.SingleOrDefault(sr =>
-                    !sr.Played && (sr.RequestUsername == username || isMod) && sr.SongRequestId == songRequestId);
-
-                if (songRequest == null) return null;
-                
-                var formattedRequest = FormattedRequest.GetFormattedRequest(songRequest.RequestText);
-
-                return new RequestSongViewModel
-                {
-                    ModalTitle = "Edit your request",
-                    IsNewRequest = false,
-                    SongRequestId = songRequest.SongRequestId,
-                    Title = formattedRequest?.SongName ?? songRequest.RequestText,
-                    Artist = formattedRequest?.SongArtist ?? string.Empty,
-                    Instruments = GetRequestInstruments(formattedRequest?.InstrumentName),
-                    SelectedInstrument = formattedRequest?.InstrumentName ?? "guitar",
-                    IsVip = songRequest.VipRequestTime != null,
-                    ShouldShowVip = false,
-                    IsSuperVip = songRequest.SuperVipRequestTime != null,
-                    ShouldShowSuperVip = false,
-                };
             }
         }
 
@@ -989,17 +945,7 @@ namespace CoreCodedChatbot.Library.Services
             return UserMaxSongCount;
         }
 
-        private SelectListItem[] GetRequestInstruments(string selectedInstrumentName = "guitar")
-        {
-            var instrumentName = string.IsNullOrWhiteSpace(selectedInstrumentName) ? "guitar" : selectedInstrumentName;
-            return new []
-            {
-                new SelectListItem("Guitar", "guitar", instrumentName == "guitar"),
-                new SelectListItem("Bass", "bass", instrumentName == "bass"), 
-            };
-        }
-
-        private bool ProcessEdit(string songRequestText, PlaylistViewModel currentSongs, string username, ProcessEditArgsResult action, int songIndex = 0)
+        private bool ProcessEdit(string songRequestText, GetAllSongsResponse currentSongs, string username, ProcessEditArgsResult action, int songIndex = 0)
         {
             var vipRequestsWithIndex =
                 currentSongs.VipList.Select((sr, index) => new { Index = index + 1, SongRequest = sr }).ToList();
@@ -1049,7 +995,7 @@ namespace CoreCodedChatbot.Library.Services
 
         }
 
-        private ProcessEditArgsResult ProcessEditArgs(string username, string commandText, PlaylistViewModel currentSongs, out string songRequestText)
+        private ProcessEditArgsResult ProcessEditArgs(string username, string commandText, GetAllSongsResponse currentSongs, out string songRequestText)
         {
             var vipRequestsWithIndex =
                 currentSongs.VipList.Select((sr, index) => new { Index = index + 1, SongRequest = sr }).ToList();
