@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using CoreCodedChatbot.ApiContract.Enums.Playlist;
+using CoreCodedChatbot.ApiContract.ResponseModels.Playlist;
+using CoreCodedChatbot.ApiContract.ResponseModels.Playlist.ChildModels;
 using CoreCodedChatbot.Library.Models.Data;
 using CoreCodedChatbot.Library.Models.Enums;
 using CoreCodedChatbot.Library.Models.View;
@@ -18,7 +20,7 @@ namespace CoreCodedChatbot.Library.Interfaces.Services
         void ArchiveCurrentRequest(int songId = 0);
         string GetUserRequests(string username);
         List<string> GetUserRelevantRequests(string username);
-        PlaylistViewModel GetAllSongs(LoggedInTwitchUser twitchUser = null);
+        GetAllSongsResponse GetAllSongs();
         void ClearRockRequests();
         bool RemoveRockRequests(string username, string commandText, bool isMod);
 
@@ -29,9 +31,6 @@ namespace CoreCodedChatbot.Library.Interfaces.Services
         PromoteRequestResult PromoteWebRequest(int songId, string username);
 
         bool AddSongToDrive(int songId);
-
-        RequestSongViewModel GetNewRequestSongViewModel(string username);
-        RequestSongViewModel GetEditRequestSongViewModel(string username, int songRequestId, bool isMod);
 
         bool OpenPlaylist();
         bool ClosePlaylist();
