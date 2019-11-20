@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CoreCodedChatbot.ApiContract" Version="1.0.409" />
+    <PackageReference Include="CoreCodedChatbot.ApiContract" Version="1.0.416" />
     <PackageReference Include="CoreCodedChatbot.Config" Version="1.0.345" />
     <PackageReference Include="CoreCodedChatbot.Database" Version="1.0.399" />
     <PackageReference Include="CoreCodedChatbot.Secrets" Version="1.0.346" />
