@@ -26,7 +26,7 @@ namespace CoreCodedChatbot.Library.Services
             using (var context = _chatbotContextFactory.Create())
             {
                 var status = context.StreamStatuses.FirstOrDefault(s =>
-                    s.BroadcasterUsername.Equals(broadcasterUsername, StringComparison.CurrentCultureIgnoreCase));
+                    s.BroadcasterUsername == broadcasterUsername);
 
                 return status?.IsOnline ?? false;
             }
@@ -39,8 +39,7 @@ namespace CoreCodedChatbot.Library.Services
                 using (var context = _chatbotContextFactory.Create())
                 {
                     var currentStatus = context.StreamStatuses.FirstOrDefault(s =>
-                        s.BroadcasterUsername.Equals(putStreamStatusRequest.BroadcasterUsername,
-                            StringComparison.CurrentCultureIgnoreCase));
+                        s.BroadcasterUsername == putStreamStatusRequest.BroadcasterUsername);
 
                     if (currentStatus == null)
                     {
