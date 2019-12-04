@@ -30,6 +30,7 @@ namespace CoreCodedChatbot.Library.Services
         private readonly IConfigService _configService;
         private readonly IVipService _vipService;
         private readonly ISecretService _secretService;
+        private readonly ISignalRService _signalRService;
         private readonly TwitchClient _client;
         private readonly ILogger<IPlaylistService> _logger;
 
@@ -40,8 +41,12 @@ namespace CoreCodedChatbot.Library.Services
         private int _concurrentVipSongsToPlay;
         private Random _rand = new Random();
 
-        public PlaylistService(IChatbotContextFactory contextFactory, IConfigService configService, IVipService vipService,
-            ISecretService secretService, TwitchClient client,
+        public PlaylistService(IChatbotContextFactory contextFactory, 
+            IConfigService configService, 
+            IVipService vipService,
+            ISecretService secretService,
+            ISignalRService signalRService,
+            TwitchClient client,
             ILogger<IPlaylistService> logger)
         {
             this._contextFactory = contextFactory;
@@ -49,6 +54,7 @@ namespace CoreCodedChatbot.Library.Services
 
             this._vipService = vipService;
             _secretService = secretService;
+            _signalRService = signalRService;
 
             this._client = client;
             _logger = logger;
@@ -289,11 +295,7 @@ namespace CoreCodedChatbot.Library.Services
         {
             var psk = _secretService.GetSecret<string>("SignalRKey");
 
-            var connection = new HubConnectionBuilder()
-                .WithUrl($"{_configService.Get<string>("WebPlaylistUrl")}/SongList")
-                .Build();
-
-            await connection.StartAsync();
+            var connection = _signalRService.GetCurrentConnection();
 
             var requests = GetAllSongs();
 
@@ -314,8 +316,6 @@ namespace CoreCodedChatbot.Library.Services
                     regularRequests = requests.RegularList,
                     vipRequests = requests.VipList
                 });
-
-            await connection.DisposeAsync();
         }
 
         public void ArchiveCurrentRequest(int songId = 0)
