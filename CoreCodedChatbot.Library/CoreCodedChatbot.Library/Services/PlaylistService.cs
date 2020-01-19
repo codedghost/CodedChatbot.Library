@@ -49,17 +49,17 @@ namespace CoreCodedChatbot.Library.Services
             TwitchClient client,
             ILogger<IPlaylistService> logger)
         {
-            this._contextFactory = contextFactory;
+            _contextFactory = contextFactory;
             _configService = configService;
 
-            this._vipService = vipService;
+            _vipService = vipService;
             _secretService = secretService;
             _signalRService = signalRService;
 
-            this._client = client;
+            _client = client;
             _logger = logger;
 
-            this._concurrentVipSongsToPlay = configService.Get<int>("ConcurrentRegularSongsToPlay");
+            _concurrentVipSongsToPlay = configService.Get<int>("ConcurrentRegularSongsToPlay");
         }
 
         public PlaylistItem GetRequestById(int songId)
@@ -794,34 +794,6 @@ namespace CoreCodedChatbot.Library.Services
                 UpdatePlaylists();
 
                 return true;
-            }
-        }
-
-        public string GetEstimatedTime(ChatViewersModel chattersModel)
-        {
-            using (var context = _contextFactory.Create())
-            {
-                try
-                {
-                    var allViewers = chattersModel.chatters.viewers
-                        .Concat(chattersModel.chatters.admins)
-                        .Concat(chattersModel.chatters.global_mods)
-                        .Concat(chattersModel.chatters.moderators)
-                        .Concat(chattersModel.chatters.staff)
-                        .ToArray();
-
-                    var requests = context.SongRequests.Where(sr => !sr.Played)
-                        .OrderRequests()
-                        .Count(sr => allViewers.Contains(sr.RequestUsername));
-
-                    var estimatedFinishTime = DateTime.UtcNow.AddMinutes(requests * 6d).ToString("HH:mm:ss");
-                    return $"Estimated time to finish: {estimatedFinishTime}";
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Error when calculating estimated time remaining in the playlist");
-                    return string.Empty;
-                }
             }
         }
 

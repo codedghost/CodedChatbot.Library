@@ -16,7 +16,6 @@ namespace CoreCodedChatbot.Library
             
             services.AddSingleton<IGuessingGameService, GuessingGameService>();
             services.AddSingleton<IPlaylistService, PlaylistService>();
-            services.AddSingleton<IStreamStatusService, StreamStatusService>();
             services.AddSingleton<IVipService, VipService>();
             services.AddSingleton<ISignalRService, SignalRService>();
 

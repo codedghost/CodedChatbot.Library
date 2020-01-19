@@ -37,7 +37,6 @@ namespace CoreCodedChatbot.Library.Interfaces.Services
         bool OpenPlaylistWeb();
         bool VeryClosePlaylistWeb();
         bool ArchiveRequestById(int songId);
-        string GetEstimatedTime(ChatViewersModel chattersModel);
         bool VeryClosePlaylist();
         int GetMaxUserRequests();
         bool IsSuperRequestInQueue();
