@@ -448,10 +448,10 @@ namespace CoreCodedChatbot.Library.Services
 
                 foreach (var request in requests)
                 {
-                    if (request.SuperVipRequestTime != null && request.SongRequestId != _currentRequest?.songRequestId)
-                        _vipService.RefundSuperVip(request.RequestUsername, true);
-                    else if (request.VipRequestTime != null && request.SongRequestId != _currentRequest?.songRequestId)
-                        _vipService.RefundVip(request.RequestUsername, true);
+                    if (request.SuperVipRequestTime != null && request.SongRequestId == _currentRequest?.songRequestId)
+                        _vipService.RefundSuperVip(request.RequestUsername);
+                    else if (request.VipRequestTime != null && request.SongRequestId == _currentRequest?.songRequestId)
+                        _vipService.RefundVip(request.RequestUsername);
                     if (request.SongRequestId == _currentRequest?.songRequestId)
                         _currentRequest = null;
 
