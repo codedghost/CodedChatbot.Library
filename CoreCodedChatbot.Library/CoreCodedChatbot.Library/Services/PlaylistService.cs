@@ -784,7 +784,7 @@ namespace CoreCodedChatbot.Library.Services
                 {
                     _vipService.RefundSuperVip(request.RequestUsername);
                 }
-                if (request.VipRequestTime != null)
+                else if (request.VipRequestTime != null)
                 {
                     _vipService.RefundVip(request.RequestUsername);
                 }
