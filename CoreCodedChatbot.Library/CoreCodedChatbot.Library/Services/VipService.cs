@@ -163,9 +163,14 @@ namespace CoreCodedChatbot.Library.Services
         {
             try
             {
+                // TEMP PATCH
+                GetUser(username);
+
                 using (var context = _chatbotContextFactory.Create())
                 {
-                    var user = GetUser(username);
+                    // User is guaranteed to now be available in the context
+
+                    var user = context.Users.Find(username);
 
                     user.ModGivenVipRequests += numberOfVips;
                     context.SaveChanges();
