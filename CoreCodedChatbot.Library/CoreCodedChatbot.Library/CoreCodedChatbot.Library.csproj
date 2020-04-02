@@ -8,8 +8,8 @@
   <ItemGroup>
     <PackageReference Include="CoreCodedChatbot.ApiContract" Version="1.0.421" />
     <PackageReference Include="CoreCodedChatbot.Config" Version="1.0.345" />
-    <PackageReference Include="CoreCodedChatbot.Database" Version="1.0.399" />
-    <PackageReference Include="CoreCodedChatbot.Secrets" Version="1.0.346" />
+    <PackageReference Include="CoreCodedChatbot.Database" Version="1.0.542" />
+    <PackageReference Include="CoreCodedChatbot.Secrets" Version="1.0.539" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="3.0.0" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="4.9.0" />
