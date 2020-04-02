@@ -113,7 +113,7 @@ namespace CoreCodedChatbot.Library.Services
 
                     if (userSongCount >= UserMaxSongCount)
                     {
-                        return (AddRequestResult.NoMultipleRequests, 0);
+                        return (AddRequestResult.MaximumRegularRequests, 0);
                     }
                 }
 
@@ -213,7 +213,7 @@ namespace CoreCodedChatbot.Library.Services
                         var userSongCount = context.SongRequests.Count(sr =>
                             !sr.Played && sr.RequestUsername == username && sr.VipRequestTime == null);
 
-                        if (userSongCount >= UserMaxSongCount) return AddRequestResult.NoMultipleRequests;
+                        if (userSongCount >= UserMaxSongCount) return AddRequestResult.MaximumRegularRequests;
                     }
 
                     var request = new SongRequest
